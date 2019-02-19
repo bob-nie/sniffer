@@ -48,7 +48,8 @@ void WINAPI ThreadProc(LPVOID lpVoid)
 	}
  
     // 初始化 Raw Socket
-    if ((sock = socket(AF_INET, SOCK_RAW,IPPROTO_IP)) == INVALID_SOCKET)
+    //if ((sock = socket(AF_INET, SOCK_RAW,IPPROTO_TCP)) == INVALID_SOCKET)
+	if ((sock = socket(AF_INET, SOCK_RAW,IPPROTO_IP)) == INVALID_SOCKET)
 	{
 		return;
 	}
@@ -90,11 +91,11 @@ void WINAPI ThreadProc(LPVOID lpVoid)
 	}
  
 	int nRowId=0;
+	int nLen=0;
 	//消息接收循环
 	while (1)
     {
- 
-		nRowId++;
+
 		int ret = recv(sock, RecvBuf, BUFFER_SIZE, 0); 
 		if(SOCKET_ERROR == ret)
 		{
@@ -106,26 +107,34 @@ void WINAPI ThreadProc(LPVOID lpVoid)
 			return;
 		}
  
- 
- 
 		Lip  = *(IpHeader *)RecvBuf;
 		Ltcp = *(TcpHeader *)(RecvBuf + Lip.HdrLen);
+
+		if(Lip.Protocol == IPPROTO_TCP)
+		{
+		nRowId++;
  
 		char    Tbuff[16] = "";
+		char    szDestAddr[16] = "";
 
 		lstrcpy(Tbuff, inet_ntoa(*(in_addr*)&Lip.SrcAddr));
 
-		
+		lstrcpy(szDestAddr, inet_ntoa(*(in_addr*)&Lip.DstAddr));
 
 		cCtrl->InsertItem(nRowId-1,"");
 		cCtrl->SetItemText(nRowId-1,1,Tbuff);
-		
+		cCtrl->SetItemText(nRowId-1,2,szDestAddr);
 
 		int iDataLen = ntohs(Lip.TotalLen);
-		memcpy(szMsg, RecvBuf+sizeof(IpHeader)+sizeof(TcpHeader), (DWORD)iDataLen);
-		cCtrl->SetItemText(nRowId-1,2,szMsg);
+		nLen = iDataLen - sizeof(IpHeader)-sizeof(TcpHeader);
+		szMsg[0]='#';
+		memcpy(szMsg+1, RecvBuf+sizeof(IpHeader)+sizeof(TcpHeader), nLen);
+		szMsg[nLen+1] = '#';
+		szMsg[nLen+2]='\0';
+		cCtrl->SetItemText(nRowId-1,3,szMsg);
 
 		//Sleep(5000);
+		}
 
 	}
 }
@@ -192,8 +201,9 @@ void CSnifferView::OnInitialUpdate()
 
 	clv->GetClientRect(&rect);
 	clc->InsertColumn(0,"id",LVCFMT_LEFT,0,0);
-	clc->InsertColumn(1,"address",LVCFMT_LEFT,150,0);
-	clc->InsertColumn(2,"msg",LVCFMT_LEFT,rect.right-150,0);
+	clc->InsertColumn(1,"srcAddr",LVCFMT_LEFT,150,0);
+	clc->InsertColumn(2,"destAddr",LVCFMT_LEFT,150,0);
+	clc->InsertColumn(3,"msg",LVCFMT_LEFT,rect.right-300,0);
 
 
 

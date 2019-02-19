@@ -35,7 +35,8 @@ typedef struct _IpHeader{
     WORD HdrChksum;
     DWORD   SrcAddr;
     DWORD   DstAddr;
-    BYTE Options;
+	//BYTE Options;
+    //DWORD Options;
 }IpHeader, *PIpHeader;
  
  
